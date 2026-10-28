@@ -1,4 +1,4 @@
-herename: APK derle
+name: APK derle
 on:
   push:
   workflow_dispatch:
