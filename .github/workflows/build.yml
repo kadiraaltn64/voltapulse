@@ -1,0 +1,42 @@
+herename: APK derle
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Projeyi bul ve derle
+        run: |
+          ZIP=$(ls *.zip 2>/dev/null | head -n 1 || true)
+          if [ -n "$ZIP" ]; then
+            mkdir -p proje_zip
+            unzip -q -o "$ZIP" -d proje_zip
+          fi
+          SETTINGS=$(find . -maxdepth 4 -name settings.gradle -not -path './.git/*' | head -n 1)
+          PROJ=$(dirname "$SETTINGS")
+          echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+          cd "$PROJ"
+          gradle --no-daemon assembleDebug
+      - name: APK hazirla
+        run: cp "$PROJ/app/build/outputs/apk/debug/app-debug.apk" VoltaPulse.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoltaPulse-apk
+          path: VoltaPulse.apk
+      - name: Releases sayfasina koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest VoltaPulse.apk --title "VoltaPulse APK" --notes "APK indirip kur."
